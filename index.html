@@ -44,6 +44,37 @@
     const ChevronLeft = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>);
     const ChevronRight = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>);
 
+    const colorClasses = {
+            darkblue: {
+                bg: 'from-blue-900 to-blue-950',
+                light: 'bg-blue-50',
+                border: 'border-blue-900',
+                text: 'text-blue-900',
+                hover: 'hover:shadow-blue-400'
+            },
+            fuchsia: {
+                bg: 'from-fuchsia-500 to-fuchsia-700',
+                light: 'bg-fuchsia-50',
+                border: 'border-fuchsia-500',
+                text: 'text-fuchsia-700',
+                hover: 'hover:shadow-fuchsia-300'
+            },
+            cyan: {
+                bg: 'from-cyan-500 to-cyan-700',
+                light: 'bg-cyan-50',
+                border: 'border-cyan-500',
+                text: 'text-cyan-700',
+                hover: 'hover:shadow-cyan-300'
+            },
+            amber: {
+                bg: 'from-amber-500 to-amber-700',
+                light: 'bg-amber-50',
+                border: 'border-amber-500',
+                text: 'text-amber-700',
+                hover: 'hover:shadow-amber-300'
+            }
+        };
+
     // Nuevo componente de Contador Inteligente
     const ContadorInteligente = ({ examenes, completedExams }) => {
         const [tiempoRestante, setTiempoRestante] = useState(null);
@@ -148,9 +179,9 @@
             return saved ? JSON.parse(saved) : [];
         });
 
-        // 🚨 NOTA: He añadido la hora de fin en el array, que es crucial para el cálculo de la fecha límite
+        // añadido la hora de fin en el array, que es crucial para el cálculo de la fecha límite
         const examenes = [
-            // 15 de Diciembre es el que aparece como próximo, ya que hoy es 4 de Noviembre de 2025
+            // 15 de Diciembre es el que aparece como próximo
             { id: 1, fecha: '16/12/2025', asignatura: 'Bioética', hora: '08:30 - 11:00', aula: 'Por confirmar', color: 'amber', mes: 0 },
             { id: 2, fecha: '09/01/2026', asignatura: 'Protección de DDHH', hora: '08:30 - 11:00', aula: 'Por confirmar', color: 'cyan', mes: 1 },
             { id: 3, fecha: '12/01/2026', asignatura: 'DIPR', nombre: 'Derecho Internacional Privado', hora: '08:30 - 11:00', aula: 'Por confirmar', color: 'fuchsia', mes: 1 },
@@ -159,8 +190,8 @@
 
         // ... El resto de la lógica de tu componente ...
         const meses = [
-            { nombre: 'Diciembre 2025', primerDia: 1, diasMes: 31, index: 0 },
-            { nombre: 'Enero 2026', primerDia: 4, diasMes: 31, index: 1 }
+            { nombre: 'Diciembre 2025', primerDia: 0, diasMes: 31, index: 0 },
+            { nombre: 'Enero 2026', primerDia: 3, diasMes: 31, index: 1 }
         ];
 
         const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -179,37 +210,6 @@
             }
             setCompletedExams(newCompleted);
             localStorage.setItem('completedExamsDerecho', JSON.stringify(newCompleted));
-        };
-
-        const colorClasses = {
-            darkblue: {
-                bg: 'from-blue-900 to-blue-950',
-                light: 'bg-blue-50',
-                border: 'border-blue-900',
-                text: 'text-blue-900',
-                hover: 'hover:shadow-blue-400'
-            },
-            fuchsia: {
-                bg: 'from-fuchsia-500 to-fuchsia-700',
-                light: 'bg-fuchsia-50',
-                border: 'border-fuchsia-500',
-                text: 'text-fuchsia-700',
-                hover: 'hover:shadow-fuchsia-300'
-            },
-            cyan: {
-                bg: 'from-cyan-500 to-cyan-700',
-                light: 'bg-cyan-50',
-                border: 'border-cyan-500',
-                text: 'text-cyan-700',
-                hover: 'hover:shadow-cyan-300'
-            },
-            amber: {
-                bg: 'from-amber-500 to-amber-700',
-                light: 'bg-amber-50',
-                border: 'border-amber-500',
-                text: 'text-amber-700',
-                hover: 'hover:shadow-amber-300'
-            }
         };
 
         const mesInfo = meses[mesActual];
@@ -538,7 +538,8 @@
         );
     };
 
-    ReactDOM.render(<CalendarioExamenes />, document.getElementById('root'));
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<CalendarioExamenes />);
     </script>
 </body>
 </html>
