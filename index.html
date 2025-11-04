@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calendario de Exámenes - Diciembre 2025 y Enero 2026</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes fadeIn {
@@ -28,389 +26,442 @@
 <body>
     <div id="root"></div>
 
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <script type="text/babel">
-        const { useState } = React;
-        
-        // Iconos SVG
-        const Calendar = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-            </svg>
-        );
+    const { useState, useEffect } = React;
+    
+    // Iconos SVG (Mantenidos)
+    const Calendar = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>);
+    const Clock = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>);
+    const MapPin = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>);
+    const Book = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>);
+    const AlertCircle = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>);
+    const CheckCircle = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>);
+    const Trophy = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>);
+    const ChevronLeft = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>);
+    const ChevronRight = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>);
 
-        const Clock = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12 6 12 12 16 14"/>
-            </svg>
-        );
+    // Nuevo componente de Contador Inteligente
+    const ContadorInteligente = ({ examenes, completedExams }) => {
+        const [tiempoRestante, setTiempoRestante] = useState(null);
+        const [proximoExamen, setProximoExamen] = useState(null);
 
-        const MapPin = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                <circle cx="12" cy="10" r="3"/>
-            </svg>
-        );
+        // Formatea la fecha y hora del examen a un objeto Date
+        const parseFechaExamen = (fecha, hora) => {
+            // Convierte "DD/MM/YYYY" a "MM/DD/YYYY" (formato que new Date() entiende mejor)
+            const [dia, mes, anio] = fecha.split('/');
+            const [horaInicio] = hora.split(' - ');
+            const fechaString = `${anio}-${mes}-${dia}T${horaInicio}:00`;
+            return new Date(fechaString);
+        };
 
-        const Book = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-            </svg>
-        );
+        const buscarProximoExamen = () => {
+            const ahora = new Date().getTime();
 
-        const AlertCircle = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-        );
-
-        const CheckCircle = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-        );
-
-        const Trophy = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
-                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
-                <path d="M4 22h16"/>
-                <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
-                <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
-                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
-            </svg>
-        );
-
-        const ChevronLeft = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <polyline points="15 18 9 12 15 6"/>
-            </svg>
-        );
-
-        const ChevronRight = ({ className }) => (
-            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <polyline points="9 18 15 12 9 6"/>
-            </svg>
-        );
-
-        const CalendarioExamenes = () => {
-            const [selectedExam, setSelectedExam] = useState(null);
-            const [mesActual, setMesActual] = useState(0); // 0 = Diciembre, 1 = Enero
-            const [completedExams, setCompletedExams] = useState(() => {
-                const saved = localStorage.getItem('completedExamsDerecho');
-                return saved ? JSON.parse(saved) : [];
+            // 1. Ordenar todos los exámenes por fecha (ascendente)
+            const examenesOrdenados = [...examenes].sort((a, b) => {
+                const fechaA = parseFechaExamen(a.fecha, a.hora).getTime();
+                const fechaB = parseFechaExamen(b.fecha, b.hora).getTime();
+                return fechaA - fechaB;
             });
 
-            const examenes = [
-                { id: 1, fecha: '16/12/2025', asignatura: 'Bioética', hora: '08:30 - 11:00', aula: 'Por confirmar', color: 'amber', mes: 0 },
-                { id: 2, fecha: '09/01/2026', asignatura: 'Protección de DDHH', hora: '08:30 - 11:00', aula: 'Por confirmar', color: 'cyan', mes: 1 },
-                { id: 3, fecha: '12/01/2026', asignatura: 'DIPR', nombre: 'Derecho Internacional Privado', hora: '08:30 - 11:00', aula: 'Por confirmar', color: 'fuchsia', mes: 1 },
-                { id: 4, fecha: '15/01/2026', asignatura: 'Género y Derecho', hora: '15:00 - 17:30', aula: 'Por confirmar', color: 'darkblue', mes: 1 }
-            ];
+            // 2. Buscar el primer examen que no esté en la lista de completados y que aún no haya pasado
+            const proximo = examenesOrdenados.find(ex => {
+                const fechaExamen = parseFechaExamen(ex.fecha, ex.hora).getTime();
+                const esPasado = fechaExamen < ahora;
+                const estaCompletado = completedExams.includes(ex.id);
+                
+                // Lo elegimos si NO está completado Y NO es pasado
+                return !estaCompletado && !esPasado;
+            });
 
-            const meses = [
-                { nombre: 'Diciembre 2025', primerDia: 0, diasMes: 31, index: 0 },
-                { nombre: 'Enero 2026', primerDia: 3, diasMes: 31, index: 1 }
-            ];
-
-            const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-            
-            const obtenerExamenes = (dia, mes) => {
-                const fechaBuscada = `${dia.toString().padStart(2, '0')}/${mes === 0 ? '12' : '01'}/${mes === 0 ? '2025' : '2026'}`;
-                return examenes.filter(ex => ex.fecha === fechaBuscada);
-            };
-
-            const toggleCompleted = (id) => {
-                let newCompleted;
-                if (completedExams.includes(id)) {
-                    newCompleted = completedExams.filter(examId => examId !== id);
-                } else {
-                    newCompleted = [...completedExams, id];
-                }
-                setCompletedExams(newCompleted);
-                localStorage.setItem('completedExamsDerecho', JSON.stringify(newCompleted));
-            };
-
-            const colorClasses = {
-                darkblue: {
-                    bg: 'from-blue-900 to-blue-950',
-                    light: 'bg-blue-50',
-                    border: 'border-blue-900',
-                    text: 'text-blue-900',
-                    hover: 'hover:shadow-blue-400'
-                },
-                fuchsia: {
-                    bg: 'from-fuchsia-500 to-fuchsia-700',
-                    light: 'bg-fuchsia-50',
-                    border: 'border-fuchsia-500',
-                    text: 'text-fuchsia-700',
-                    hover: 'hover:shadow-fuchsia-300'
-                },
-                cyan: {
-                    bg: 'from-cyan-500 to-cyan-700',
-                    light: 'bg-cyan-50',
-                    border: 'border-cyan-500',
-                    text: 'text-cyan-700',
-                    hover: 'hover:shadow-cyan-300'
-                },
-                amber: {
-                    bg: 'from-amber-500 to-amber-700',
-                    light: 'bg-amber-50',
-                    border: 'border-amber-500',
-                    text: 'text-amber-700',
-                    hover: 'hover:shadow-amber-300'
-                }
-            };
-
-            const mesInfo = meses[mesActual];
-            const diasCalendario = [];
-            for (let i = 0; i < mesInfo.primerDia; i++) {
-                diasCalendario.push(null);
+            if (proximo) {
+                const tiempoDiferencia = parseFechaExamen(proximo.fecha, proximo.hora).getTime() - ahora;
+                setProximoExamen(proximo);
+                setTiempoRestante(tiempoDiferencia);
+            } else {
+                setProximoExamen(null);
+                setTiempoRestante(null);
             }
-            for (let dia = 1; dia <= mesInfo.diasMes; dia++) {
-                diasCalendario.push(dia);
-            }
+        };
 
-            const hoy = new Date();
-            const diaHoy = hoy.getDate();
-            const mesHoy = hoy.getMonth();
-            const añoHoy = hoy.getFullYear();
-            const esHoy = (dia) => {
-                if (mesActual === 0) {
-                    return dia === diaHoy && mesHoy === 11 && añoHoy === 2025;
-                } else {
-                    return dia === diaHoy && mesHoy === 0 && añoHoy === 2026;
-                }
-            };
+        useEffect(() => {
+            buscarProximoExamen(); // Primera ejecución
 
-            const completados = completedExams.length;
-            const total = examenes.length;
-            const progreso = (completados / total) * 100;
+            const intervalo = setInterval(buscarProximoExamen, 1000);
 
-            const examenesDelMes = examenes.filter(ex => ex.mes === mesActual);
+            return () => clearInterval(intervalo);
+        }, [examenes, completedExams]); // Dependencias para recalcular si la lista cambia
 
+        // Renderizado
+        if (!proximoExamen) {
             return (
-                <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 p-4 md:p-8">
-                    <div className="max-w-7xl mx-auto">
-                        
-                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-2xl p-6 md:p-8 mb-6 transform hover:scale-[1.02] transition-all duration-300">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <div>
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                                            <Calendar className="w-8 h-8 text-white" />
-                                        </div>
-                                        <div>
-                                            <h1 className="text-3xl md:text-4xl font-bold text-white">Exámenes de Derecho</h1>
-                                            <p className="text-indigo-200">Diciembre 2025 - Enero 2026</p>
-                                        </div>
+                <div className="bg-green-500 text-white rounded-xl shadow-lg p-4 mb-6 zoom-in-95">
+                    <div className="flex items-center gap-3">
+                        <Trophy className="w-8 h-8 text-yellow-300" />
+                        <div>
+                            <p className="text-lg font-bold">¡Felicidades!</p>
+                            <p className="text-sm">Ya no tienes exámenes pendientes (o los has completado todos).</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const ms = tiempoRestante;
+        const dias = Math.floor(ms / (1000 * 60 * 60 * 24));
+        const horas = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutos = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+        const segundos = Math.floor((ms % (1000 * 60)) / 1000);
+        
+        const nombreExamen = proximoExamen.nombre || proximoExamen.asignatura;
+
+        return (
+            <div className={`bg-gradient-to-r ${colorClasses[proximoExamen.color].bg} text-white rounded-xl shadow-lg p-4 mb-6 transform hover:scale-[1.01] transition-all zoom-in-95`}>
+                <p className="text-sm opacity-90 font-semibold mb-2 flex items-center gap-2">
+                    <Clock className="w-4 h-4"/> Próximo Examen Pendiente
+                </p>
+                <h3 className="text-xl font-bold mb-3">{nombreExamen} ({proximoExamen.asignatura})</h3>
+                <div className="flex justify-between items-end">
+                    <div className="text-left">
+                        <p className="text-xs">Fecha: {proximoExamen.fecha} a las {proximoExamen.hora.split(' - ')[0]}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-xs font-semibold">Queda</p>
+                        <p className="text-3xl font-extrabold leading-none">
+                            {dias}D {horas.toString().padStart(2, '0')}H {minutos.toString().padStart(2, '0')}M
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const CalendarioExamenes = () => {
+        const [selectedExam, setSelectedExam] = useState(null);
+        const [mesActual, setMesActual] = useState(0); // 0 = Diciembre, 1 = Enero
+        const [completedExams, setCompletedExams] = useState(() => {
+            const saved = localStorage.getItem('completedExamsDerecho');
+            return saved ? JSON.parse(saved) : [];
+        });
+
+        // 🚨 NOTA: He añadido la hora de fin en el array, que es crucial para el cálculo de la fecha límite
+        const examenes = [
+            // 15 de Diciembre es el que aparece como próximo, ya que hoy es 4 de Noviembre de 2025
+            { id: 1, fecha: '16/12/2025', asignatura: 'Bioética', hora: '08:30 - 11:00', aula: 'Por confirmar', color: 'amber', mes: 0 },
+            { id: 2, fecha: '09/01/2026', asignatura: 'Protección de DDHH', hora: '08:30 - 11:00', aula: 'Por confirmar', color: 'cyan', mes: 1 },
+            { id: 3, fecha: '12/01/2026', asignatura: 'DIPR', nombre: 'Derecho Internacional Privado', hora: '08:30 - 11:00', aula: 'Por confirmar', color: 'fuchsia', mes: 1 },
+            { id: 4, fecha: '15/01/2026', asignatura: 'Género y Derecho', hora: '15:00 - 17:30', aula: 'Por confirmar', color: 'darkblue', mes: 1 }
+        ];
+
+        // ... El resto de la lógica de tu componente ...
+        const meses = [
+            { nombre: 'Diciembre 2025', primerDia: 1, diasMes: 31, index: 0 },
+            { nombre: 'Enero 2026', primerDia: 4, diasMes: 31, index: 1 }
+        ];
+
+        const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+        
+        const obtenerExamenes = (dia, mes) => {
+            const fechaBuscada = `${dia.toString().padStart(2, '0')}/${mes === 0 ? '12' : '01'}/${mes === 0 ? '2025' : '2026'}`;
+            return examenes.filter(ex => ex.fecha === fechaBuscada);
+        };
+
+        const toggleCompleted = (id) => {
+            let newCompleted;
+            if (completedExams.includes(id)) {
+                newCompleted = completedExams.filter(examId => examId !== id);
+            } else {
+                newCompleted = [...completedExams, id];
+            }
+            setCompletedExams(newCompleted);
+            localStorage.setItem('completedExamsDerecho', JSON.stringify(newCompleted));
+        };
+
+        const colorClasses = {
+            darkblue: {
+                bg: 'from-blue-900 to-blue-950',
+                light: 'bg-blue-50',
+                border: 'border-blue-900',
+                text: 'text-blue-900',
+                hover: 'hover:shadow-blue-400'
+            },
+            fuchsia: {
+                bg: 'from-fuchsia-500 to-fuchsia-700',
+                light: 'bg-fuchsia-50',
+                border: 'border-fuchsia-500',
+                text: 'text-fuchsia-700',
+                hover: 'hover:shadow-fuchsia-300'
+            },
+            cyan: {
+                bg: 'from-cyan-500 to-cyan-700',
+                light: 'bg-cyan-50',
+                border: 'border-cyan-500',
+                text: 'text-cyan-700',
+                hover: 'hover:shadow-cyan-300'
+            },
+            amber: {
+                bg: 'from-amber-500 to-amber-700',
+                light: 'bg-amber-50',
+                border: 'border-amber-500',
+                text: 'text-amber-700',
+                hover: 'hover:shadow-amber-300'
+            }
+        };
+
+        const mesInfo = meses[mesActual];
+        const diasCalendario = [];
+        for (let i = 0; i < mesInfo.primerDia; i++) {
+            diasCalendario.push(null);
+        }
+        for (let dia = 1; dia <= mesInfo.diasMes; dia++) {
+            diasCalendario.push(dia);
+        }
+
+        const hoy = new Date();
+        const diaHoy = hoy.getDate();
+        const mesHoy = hoy.getMonth();
+        const añoHoy = hoy.getFullYear();
+        const esHoy = (dia) => {
+            if (mesActual === 0) {
+                return dia === diaHoy && mesHoy === 11 && añoHoy === 2025;
+            } else {
+                return dia === diaHoy && mesHoy === 0 && añoHoy === 2026;
+            }
+        };
+
+        const completados = completedExams.length;
+        const total = examenes.length;
+        const progreso = (completados / total) * 100;
+
+        const examenesDelMes = examenes.filter(ex => ex.mes === mesActual);
+
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 p-4 md:p-8">
+                <div className="max-w-7xl mx-auto">
+                    
+                    {/* Header y Progreso */}
+                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-2xl p-6 md:p-8 mb-6 transform hover:scale-[1.02] transition-all duration-300">
+                        {/* ... Contenido del Header (título, totales) ... */}
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                                        <Calendar className="w-8 h-8 text-white" />
                                     </div>
-                                </div>
-                                
-                                <div className="flex gap-4">
-                                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <Book className="w-5 h-5 text-white" />
-                                            <span className="text-white font-semibold">Total</span>
-                                        </div>
-                                        <p className="text-3xl font-bold text-white">{total}</p>
-                                    </div>
-                                    
-                                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <Trophy className="w-5 h-5 text-yellow-300" />
-                                            <span className="text-white font-semibold">Hechos</span>
-                                        </div>
-                                        <p className="text-3xl font-bold text-white">{completados}</p>
+                                    <div>
+                                        <h1 className="text-3xl md:text-4xl font-bold text-white">Exámenes de Derecho</h1>
+                                        <p className="text-indigo-200">Diciembre 2025 - Enero 2026</p>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div className="mt-6">
-                                <div className="flex justify-between text-sm text-white mb-2">
-                                    <span>Progreso</span>
-                                    <span>{Math.round(progreso)}%</span>
+                            <div className="flex gap-4">
+                                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Book className="w-5 h-5 text-white" />
+                                        <span className="text-white font-semibold">Total</span>
+                                    </div>
+                                    <p className="text-3xl font-bold text-white">{total}</p>
                                 </div>
-                                <div className="h-3 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
-                                    <div 
-                                        className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-1000 ease-out"
-                                        style={{ width: `${progreso}%` }}
-                                    ></div>
+                                
+                                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Trophy className="w-5 h-5 text-yellow-300" />
+                                        <span className="text-white font-semibold">Hechos</span>
+                                    </div>
+                                    <p className="text-3xl font-bold text-white">{completados}</p>
                                 </div>
                             </div>
                         </div>
+                        
+                        <div className="mt-6">
+                            <div className="flex justify-between text-sm text-white mb-2">
+                                <span>Progreso</span>
+                                <span>{Math.round(progreso)}%</span>
+                            </div>
+                            <div className="h-3 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
+                                <div 
+                                    className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-1000 ease-out"
+                                    style={{ width: `${progreso}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
 
-                        <div className="grid lg:grid-cols-3 gap-6">
-                            
-                            <div className="lg:col-span-2 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-white/20">
-                                <div className="flex justify-between items-center mb-6">
-                                    <button
-                                        onClick={() => setMesActual(Math.max(0, mesActual - 1))}
-                                        disabled={mesActual === 0}
-                                        className={`p-2 rounded-lg transition-all ${mesActual === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100'}`}
-                                    >
-                                        <ChevronLeft className="w-6 h-6 text-gray-700" />
-                                    </button>
-                                    
-                                    <h2 className="text-2xl font-bold text-gray-800">{mesInfo.nombre}</h2>
-                                    
-                                    <button
-                                        onClick={() => setMesActual(Math.min(1, mesActual + 1))}
-                                        disabled={mesActual === 1}
-                                        className={`p-2 rounded-lg transition-all ${mesActual === 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100'}`}
-                                    >
-                                        <ChevronRight className="w-6 h-6 text-gray-700" />
-                                    </button>
-                                </div>
-
-                                <div className="grid grid-cols-7 gap-2 mb-4">
-                                    {diasSemana.map(dia => (
-                                        <div key={dia} className="text-center font-bold text-gray-700 py-2 text-sm md:text-base">
-                                            {dia}
-                                        </div>
-                                    ))}
-                                </div>
+                    {/* NUEVO CONTADOR INTELIGENTE */}
+                    <ContadorInteligente examenes={examenes} completedExams={completedExams} />
+                    
+                    <div className="grid lg:grid-cols-3 gap-6">
+                        {/* ... Resto de la aplicación (Calendario, Lista de Exámenes, Leyenda) ... */}
+                        <div className="lg:col-span-2 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-white/20">
+                            <div className="flex justify-between items-center mb-6">
+                                <button
+                                    onClick={() => setMesActual(Math.max(0, mesActual - 1))}
+                                    disabled={mesActual === 0}
+                                    className={`p-2 rounded-lg transition-all ${mesActual === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+                                >
+                                    <ChevronLeft className="w-6 h-6 text-gray-700" />
+                                </button>
                                 
-                                <div className="grid grid-cols-7 gap-2">
-                                    {diasCalendario.map((dia, index) => {
-                                        const examenesDelDia = dia ? obtenerExamenes(dia, mesActual) : [];
-                                        const tieneExamen = examenesDelDia.length > 0;
-                                        const primerExamen = examenesDelDia[0];
-                                        
-                                        return (
-                                            <div
-                                                key={index}
-                                                onClick={() => tieneExamen && setSelectedExam(primerExamen)}
-                                                className={`
-                                                    relative min-h-16 md:min-h-24 p-2 rounded-xl border-2 transition-all duration-300
-                                                    ${dia === null ? 'bg-gray-100 border-gray-200' : ''}
-                                                    ${dia && !tieneExamen ? 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-md cursor-default' : ''}
-                                                    ${tieneExamen ? `${colorClasses[primerExamen.color].light} ${colorClasses[primerExamen.color].border} cursor-pointer hover:shadow-xl ${colorClasses[primerExamen.color].hover} transform hover:scale-105` : ''}
-                                                    ${esHoy(dia) ? 'ring-4 ring-yellow-400 ring-opacity-50' : ''}
-                                                `}
-                                            >
-                                                {dia && (
-                                                    <>
-                                                        <div className={`font-bold mb-1 text-sm ${esHoy(dia) ? 'text-yellow-600' : 'text-gray-700'}`}>
-                                                            {dia}
-                                                            {esHoy(dia) && <span className="text-xs ml-1">HOY</span>}
-                                                        </div>
-                                                        {tieneExamen && (
-                                                            <div className="space-y-1">
-                                                                {examenesDelDia.map((examen, idx) => (
-                                                                    <div key={idx} className={`text-xs font-semibold ${colorClasses[examen.color].text} flex items-center gap-1`}>
-                                                                        <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                                                                        <span className="truncate">{examen.asignatura}</span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                <h2 className="text-2xl font-bold text-gray-800">{mesInfo.nombre}</h2>
+                                
+                                <button
+                                    onClick={() => setMesActual(Math.min(1, mesActual + 1))}
+                                    disabled={mesActual === 1}
+                                    className={`p-2 rounded-lg transition-all ${mesActual === 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+                                >
+                                    <ChevronRight className="w-6 h-6 text-gray-700" />
+                                </button>
                             </div>
 
-                            <div className="space-y-4">
-                                <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-white/20">
-                                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                        <Book className="w-6 h-6 text-indigo-600" />
-                                        {mesInfo.nombre}
-                                    </h2>
+                            <div className="grid grid-cols-7 gap-2 mb-4">
+                                {diasSemana.map(dia => (
+                                    <div key={dia} className="text-center font-bold text-gray-700 py-2 text-sm md:text-base">
+                                        {dia}
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            <div className="grid grid-cols-7 gap-2">
+                                {diasCalendario.map((dia, index) => {
+                                    const examenesDelDia = dia ? obtenerExamenes(dia, mesActual) : [];
+                                    const tieneExamen = examenesDelDia.length > 0;
+                                    const primerExamen = examenesDelDia[0];
                                     
-                                    {examenesDelMes.length === 0 ? (
-                                        <div className="text-center py-8 text-gray-500">
-                                            <p>No hay exámenes este mes</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {examenesDelMes.map((examen) => (
-                                                <div
-                                                    key={examen.id}
-                                                    onClick={() => setSelectedExam(examen)}
-                                                    className={`
-                                                        p-4 rounded-xl border-2 transition-all duration-300 cursor-pointer
-                                                        ${colorClasses[examen.color].light} ${colorClasses[examen.color].border}
-                                                        hover:shadow-lg transform hover:scale-[1.02]
-                                                        ${completedExams.includes(examen.id) ? 'opacity-50' : ''}
-                                                    `}
-                                                >
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <div className="flex-1">
-                                                            <div className={`font-bold text-lg ${colorClasses[examen.color].text}`}>
-                                                                {examen.asignatura}
-                                                            </div>
-                                                            {examen.nombre && (
-                                                                <div className="text-sm text-gray-600">{examen.nombre}</div>
-                                                            )}
-                                                        </div>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                toggleCompleted(examen.id);
-                                                            }}
-                                                            className={`
-                                                                p-2 rounded-full transition-all duration-300
-                                                                ${completedExams.includes(examen.id) 
-                                                                    ? 'bg-green-500 text-white' 
-                                                                    : 'bg-gray-200 text-gray-400 hover:bg-gray-300'}
-                                                            `}
-                                                        >
-                                                            <CheckCircle className="w-5 h-5" />
-                                                        </button>
+                                    // Determinar si el examen del día ya se ha completado
+                                    const examenesCompletadosEnDia = examenesDelDia.every(ex => completedExams.includes(ex.id));
+
+                                    return (
+                                        <div
+                                            key={index}
+                                            onClick={() => tieneExamen && setSelectedExam(primerExamen)}
+                                            className={`
+                                                relative min-h-16 md:min-h-24 p-2 rounded-xl border-2 transition-all duration-300
+                                                ${dia === null ? 'bg-gray-100 border-gray-200' : ''}
+                                                ${dia && !tieneExamen ? 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-md cursor-default' : ''}
+                                                ${tieneExamen ? `${colorClasses[primerExamen.color].light} ${colorClasses[primerExamen.color].border} cursor-pointer hover:shadow-xl ${colorClasses[primerExamen.color].hover} transform hover:scale-105` : ''}
+                                                ${esHoy(dia) ? 'ring-4 ring-yellow-400 ring-opacity-50' : ''}
+                                                ${examenesCompletadosEnDia && tieneExamen ? 'opacity-60 saturate-0' : ''}
+                                            `}
+                                        >
+                                            {dia && (
+                                                <>
+                                                    <div className={`font-bold mb-1 text-sm ${esHoy(dia) ? 'text-yellow-600' : 'text-gray-700'}`}>
+                                                        {dia}
+                                                        {esHoy(dia) && <span className="text-xs ml-1">HOY</span>}
                                                     </div>
-                                                    
-                                                    <div className="space-y-1 text-sm text-gray-600">
-                                                        <div className="flex items-center gap-2">
-                                                            <Calendar className="w-4 h-4" />
-                                                            <span>{examen.fecha}</span>
+                                                    {tieneExamen && (
+                                                        <div className="space-y-1">
+                                                            {examenesDelDia.map((examen, idx) => (
+                                                                <div key={idx} className={`text-xs font-semibold ${colorClasses[examen.color].text} flex items-center gap-1 ${completedExams.includes(examen.id) ? 'line-through opacity-70' : ''}`}>
+                                                                    {completedExams.includes(examen.id) ? <CheckCircle className="w-3 h-3 flex-shrink-0 text-green-600" /> : <AlertCircle className="w-3 h-3 flex-shrink-0" />}
+                                                                    <span className="truncate">{examen.asignatura}</span>
+                                                                </div>
+                                                            ))}
                                                         </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <Clock className="w-4 h-4" />
-                                                            <span>{examen.hora}</span>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-white/20">
+                                <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <Book className="w-6 h-6 text-indigo-600" />
+                                    {mesInfo.nombre}
+                                </h2>
+                                
+                                {examenesDelMes.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <p>No hay exámenes este mes</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {examenesDelMes.map((examen) => (
+                                            <div
+                                                key={examen.id}
+                                                onClick={() => setSelectedExam(examen)}
+                                                className={`
+                                                    p-4 rounded-xl border-2 transition-all duration-300 cursor-pointer
+                                                    ${colorClasses[examen.color].light} ${colorClasses[examen.color].border}
+                                                    hover:shadow-lg transform hover:scale-[1.02]
+                                                    ${completedExams.includes(examen.id) ? 'opacity-50 line-through' : ''}
+                                                `}
+                                            >
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex-1">
+                                                        <div className={`font-bold text-lg ${colorClasses[examen.color].text}`}>
+                                                            {examen.asignatura}
                                                         </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <MapPin className="w-4 h-4" />
-                                                            <span>{examen.aula}</span>
-                                                        </div>
+                                                        {examen.nombre && (
+                                                            <div className="text-sm text-gray-600">{examen.nombre}</div>
+                                                        )}
+                                                    </div>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            toggleCompleted(examen.id);
+                                                        }}
+                                                        className={`
+                                                            p-2 rounded-full transition-all duration-300
+                                                            ${completedExams.includes(examen.id) 
+                                                                ? 'bg-green-500 text-white' 
+                                                                : 'bg-gray-200 text-gray-400 hover:bg-gray-300'}
+                                                        `}
+                                                    >
+                                                        <CheckCircle className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                                
+                                                <div className="space-y-1 text-sm text-gray-600">
+                                                    <div className="flex items-center gap-2">
+                                                        <Calendar className="w-4 h-4" />
+                                                        <span>{examen.fecha}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="w-4 h-4" />
+                                                        <span>{examen.hora}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <MapPin className="w-4 h-4" />
+                                                        <span>{examen.aula}</span>
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
 
-                                <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-white/20">
-                                    <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                                        <div className="w-4 h-4 bg-gradient-to-br from-indigo-500 to-purple-500 rounded"></div>
-                                        Leyenda de colores
-                                    </h3>
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-cyan-100 border-2 border-cyan-500 rounded"></div>
-                                            <span className="text-sm text-gray-700">Protección de DDHH</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-fuchsia-100 border-2 border-fuchsia-500 rounded"></div>
-                                            <span className="text-sm text-gray-700">DIPR</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-blue-50 border-2 border-blue-900 rounded"></div>
-                                            <span className="text-sm text-gray-700">Género y Derecho</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 bg-amber-100 border-2 border-amber-500 rounded"></div>
-                                            <span className="text-sm text-gray-700">Bioética</span>
-                                        </div>
+                            <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-white/20">
+                                <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                    <div className="w-4 h-4 bg-gradient-to-br from-indigo-500 to-purple-500 rounded"></div>
+                                    Leyenda de colores
+                                </h3>
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 bg-cyan-100 border-2 border-cyan-500 rounded"></div>
+                                        <span className="text-sm text-gray-700">Protección de DDHH</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 bg-fuchsia-100 border-2 border-fuchsia-500 rounded"></div>
+                                        <span className="text-sm text-gray-700">DIPR</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 bg-blue-50 border-2 border-blue-900 rounded"></div>
+                                        <span className="text-sm text-gray-700">Género y Derecho</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 bg-amber-100 border-2 border-amber-500 rounded"></div>
+                                        <span className="text-sm text-gray-700">Bioética</span>
                                     </div>
                                 </div>
                             </div>
@@ -483,10 +534,11 @@
                         )}
                     </div>
                 </div>
-            );
-        };
+            </div>
+        );
+    };
 
-        ReactDOM.render(<CalendarioExamenes />, document.getElementById('root'));
+    ReactDOM.render(<CalendarioExamenes />, document.getElementById('root'));
     </script>
 </body>
 </html>
