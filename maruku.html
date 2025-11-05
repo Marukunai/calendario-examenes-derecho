@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario de Exámenes - Noviembre 2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes zoomIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .animate-in {
+            animation: fadeIn 0.2s ease-out;
+        }
+        .zoom-in-95 {
+            animation: zoomIn 0.2s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // Iconos SVG
+        const Calendar = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>);
+        const Clock = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>);
+        const MapPin = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>);
+        const Book = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>);
+        const AlertCircle = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>);
+        const CheckCircle = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>);
+        const Trophy = ({ className }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>);
+
+        const colorClasses = {
+            purple: {
+                bg: 'from-purple-500 to-purple-700',
+                light: 'bg-purple-50',
+                border: 'border-purple-500',
+                text: 'text-purple-700',
+                hover: 'hover:shadow-purple-300'
+            },
+            blue: {
+                bg: 'from-blue-500 to-blue-700',
+                light: 'bg-blue-50',
+                border: 'border-blue-500',
+                text: 'text-blue-700',
+                hover: 'hover:shadow-blue-300'
+            },
+            green: {
+                bg: 'from-green-500 to-green-700',
+                light: 'bg-green-50',
+                border: 'border-green-500',
+                text: 'text-green-700',
+                hover: 'hover:shadow-green-300'
+            },
+            orange: {
+                bg: 'from-orange-500 to-orange-700',
+                light: 'bg-orange-50',
+                border: 'border-orange-500',
+                text: 'text-orange-700',
+                hover: 'hover:shadow-orange-300'
+            }
+        };
+
+        // Componente de Contador Inteligente
+        const ContadorInteligente = ({ examenes, completedExams }) => {
+            const [tiempoRestante, setTiempoRestante] = useState(null);
+            const [proximoExamen, setProximoExamen] = useState(null);
+
+            const parseFechaExamen = (fecha, hora) => {
+                const [dia, mes, anio] = fecha.split('/');
+                const horaInicio = hora.replace('h', '');
+                const fechaString = `${anio}-${mes}-${dia}T${horaInicio}:00`;
+                return new Date(fechaString);
+            };
+
+            const buscarProximoExamen = () => {
+                const ahora = new Date().getTime();
+
+                const examenesOrdenados = [...examenes].sort((a, b) => {
+                    const fechaA = parseFechaExamen(a.fecha, a.hora).getTime();
+                    const fechaB = parseFechaExamen(b.fecha, b.hora).getTime();
+                    return fechaA - fechaB;
+                });
+
+                const proximo = examenesOrdenados.find(ex => {
+                    const fechaExamen = parseFechaExamen(ex.fecha, ex.hora).getTime();
+                    const esPasado = fechaExamen < ahora;
+                    const estaCompletado = completedExams.includes(ex.id);
+                    
+                    return !estaCompletado && !esPasado;
+                });
+
+                if (proximo) {
+                    const tiempoDiferencia = parseFechaExamen(proximo.fecha, proximo.hora).getTime() - ahora;
+                    setProximoExamen(proximo);
+                    setTiempoRestante(tiempoDiferencia);
+                } else {
+                    setProximoExamen(null);
+                    setTiempoRestante(null);
+                }
+            };
+
+            useEffect(() => {
+                buscarProximoExamen();
+                const intervalo = setInterval(buscarProximoExamen, 1000);
+                return () => clearInterval(intervalo);
+            }, [examenes, completedExams]);
+
+            if (!proximoExamen) {
+                return (
+                    <div className="bg-green-500 text-white rounded-xl shadow-lg p-4 mb-6 zoom-in-95">
+                        <div className="flex items-center gap-3">
+                            <Trophy className="w-8 h-8 text-yellow-300" />
+                            <div>
+                                <p className="text-lg font-bold">¡Felicidades!</p>
+                                <p className="text-sm">Ya no tienes exámenes pendientes (o los has completado todos).</p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            const ms = tiempoRestante;
+            const dias = Math.floor(ms / (1000 * 60 * 60 * 24));
+            const horas = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutos = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+            const segundos = Math.floor((ms % (1000 * 60)) / 1000);
+            
+            const nombreExamen = proximoExamen.nombre || proximoExamen.asignatura;
+
+            return (
+                <div className={`bg-gradient-to-r ${colorClasses[proximoExamen.color].bg} text-white rounded-xl shadow-lg p-4 mb-6 transform hover:scale-[1.01] transition-all zoom-in-95`}>
+                    <p className="text-sm opacity-90 font-semibold mb-2 flex items-center gap-2">
+                        <Clock className="w-4 h-4"/> Próximo Examen Pendiente
+                    </p>
+                    <h3 className="text-xl font-bold mb-3">{nombreExamen} ({proximoExamen.asignatura})</h3>
+                    <div className="flex justify-between items-end">
+                        <div className="text-left">
+                            <p className="text-xs">Fecha: {proximoExamen.fecha} a las {proximoExamen.hora}</p>
+                            <p className="text-xs">Aula: {proximoExamen.aula}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xs font-semibold">Queda</p>
+                            <p className="text-3xl font-extrabold leading-none">
+                                {dias}D {horas.toString().padStart(2, '0')}H {minutos.toString().padStart(2, '0')}M
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const CalendarioExamenes = () => {
+            const [selectedExam, setSelectedExam] = useState(null);
+            const [completedExams, setCompletedExams] = useState(() => {
+                const saved = localStorage.getItem('completedExams');
+                return saved ? JSON.parse(saved) : [];
+            });
+
+            const examenes = [
+                { id: 1, fecha: '11/11/2025', asignatura: 'M09', nombre: 'Programación de Servicios y Procesos', hora: '16:00', aula: 'N2I', color: 'purple' },
+                { id: 2, fecha: '18/11/2025', asignatura: 'M09', nombre: 'Programación de Servicios y Procesos', hora: '16:00', aula: 'N2I', color: 'purple' },
+                { id: 3, fecha: '19/11/2025', asignatura: 'M08', nombre: 'Android', hora: '16:00', aula: 'N2I', color: 'blue' },
+                { id: 4, fecha: '24/11/2025', asignatura: 'M06', nombre: 'Acceso a Datos', hora: '16:00', aula: 'N2J', color: 'green' },
+                { id: 5, fecha: '25/11/2025', asignatura: 'M09', nombre: 'Programación de Servicios y Procesos', hora: '16:00', aula: 'N2I', color: 'purple' },
+                { id: 6, fecha: '26/11/2025', asignatura: 'M07', nombre: 'Desarrollo de Interfaces', hora: '16:00', aula: 'F2F', color: 'orange' }
+            ];
+
+            const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+            const primerDia = 5;
+            const diasMes = 30;
+            
+            const obtenerExamenes = (dia) => {
+                const fechaBuscada = `${dia.toString().padStart(2, '0')}/11/2025`;
+                return examenes.filter(ex => ex.fecha === fechaBuscada);
+            };
+
+            const toggleCompleted = (id) => {
+                let newCompleted;
+                if (completedExams.includes(id)) {
+                    newCompleted = completedExams.filter(examId => examId !== id);
+                } else {
+                    newCompleted = [...completedExams, id];
+                }
+                setCompletedExams(newCompleted);
+                localStorage.setItem('completedExams', JSON.stringify(newCompleted));
+            };
+
+            const diasCalendario = [];
+            for (let i = 0; i < primerDia; i++) {
+                diasCalendario.push(null);
+            }
+            for (let dia = 1; dia <= diasMes; dia++) {
+                diasCalendario.push(dia);
+            }
+
+            const hoy = new Date();
+            const diaHoy = hoy.getDate();
+            const mesHoy = hoy.getMonth();
+            const esHoy = (dia) => dia === diaHoy && mesHoy === 10;
+
+            const completados = completedExams.length;
+            const total = examenes.length;
+            const progreso = (completados / total) * 100;
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 md:p-8">
+                    <div className="max-w-7xl mx-auto">
+                        
+                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-2xl p-6 md:p-8 mb-6 transform hover:scale-[1.02] transition-all duration-300">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                                            <Calendar className="w-8 h-8 text-white" />
+                                        </div>
+                                        <div>
+                                            <h1 className="text-3xl md:text-4xl font-bold text-white">Noviembre 2025</h1>
+                                            <p className="text-indigo-200">Calendario de Exámenes</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex gap-4">
+                                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Book className="w-5 h-5 text-white" />
+                                            <span className="text-white font-semibold">Total</span>
+                                        </div>
+                                        <p className="text-3xl font-bold text-white">{total}</p>
+                                    </div>
+                                    
+                                    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <Trophy className="w-5 h-5 text-yellow-300" />
+                                            <span className="text-white font-semibold">Hechos</span>
+                                        </div>
+                                        <p className="text-3xl font-bold text-white">{completados}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="mt-6">
+                                <div className="flex justify-between text-sm text-white mb-2">
+                                    <span>Progreso</span>
+                                    <span>{Math.round(progreso)}%</span>
+                                </div>
+                                <div className="h-3 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
+                                    <div 
+                                        className="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full transition-all duration-1000 ease-out"
+                                        style={{ width: `${progreso}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* CONTADOR INTELIGENTE */}
+                        <ContadorInteligente examenes={examenes} completedExams={completedExams} />
+
+                        <div className="grid lg:grid-cols-3 gap-6">
+                            
+                            <div className="lg:col-span-2 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-white/20">
+                                <div className="grid grid-cols-7 gap-2 mb-4">
+                                    {diasSemana.map(dia => (
+                                        <div key={dia} className="text-center font-bold text-gray-700 py-2 text-sm md:text-base">
+                                            {dia}
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                <div className="grid grid-cols-7 gap-2">
+                                    {diasCalendario.map((dia, index) => {
+                                        const examenesDelDia = dia ? obtenerExamenes(dia) : [];
+                                        const tieneExamen = examenesDelDia.length > 0;
+                                        const primerExamen = examenesDelDia[0];
+                                        const examenesCompletadosEnDia = examenesDelDia.every(ex => completedExams.includes(ex.id));
+                                        
+                                        return (
+                                            <div
+                                                key={index}
+                                                onClick={() => tieneExamen && setSelectedExam(primerExamen)}
+                                                className={`
+                                                    relative min-h-16 md:min-h-24 p-2 rounded-xl border-2 transition-all duration-300
+                                                    ${dia === null ? 'bg-gray-100 border-gray-200' : ''}
+                                                    ${dia && !tieneExamen ? 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-md cursor-default' : ''}
+                                                    ${tieneExamen ? `${colorClasses[primerExamen.color].light} ${colorClasses[primerExamen.color].border} cursor-pointer hover:shadow-xl ${colorClasses[primerExamen.color].hover} transform hover:scale-105` : ''}
+                                                    ${esHoy(dia) ? 'ring-4 ring-yellow-400 ring-opacity-50' : ''}
+                                                    ${examenesCompletadosEnDia && tieneExamen ? 'opacity-60 saturate-0' : ''}
+                                                `}
+                                            >
+                                                {dia && (
+                                                    <>
+                                                        <div className={`font-bold mb-1 ${esHoy(dia) ? 'text-yellow-600' : 'text-gray-700'}`}>
+                                                            {dia}
+                                                            {esHoy(dia) && <span className="text-xs ml-1">HOY</span>}
+                                                        </div>
+                                                        {tieneExamen && (
+                                                            <div className="space-y-1">
+                                                                {examenesDelDia.map((examen, idx) => (
+                                                                    <div key={idx} className={`text-xs font-semibold ${colorClasses[examen.color].text} flex items-center gap-1 ${completedExams.includes(examen.id) ? 'line-through opacity-70' : ''}`}>
+                                                                        {completedExams.includes(examen.id) ? <CheckCircle className="w-3 h-3 flex-shrink-0 text-green-600" /> : <AlertCircle className="w-3 h-3" />}
+                                                                        <span className="truncate">{examen.asignatura}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl p-6 border border-white/20">
+                                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                        <Book className="w-6 h-6 text-indigo-600" />
+                                        Próximos Exámenes
+                                    </h2>
+                                    
+                                    <div className="space-y-3">
+                                        {examenes.map((examen) => (
+                                            <div
+                                                key={examen.id}
+                                                onClick={() => setSelectedExam(examen)}
+                                                className={`
+                                                    p-4 rounded-xl border-2 transition-all duration-300 cursor-pointer
+                                                    ${colorClasses[examen.color].light} ${colorClasses[examen.color].border}
+                                                    hover:shadow-lg transform hover:scale-[1.02]
+                                                    ${completedExams.includes(examen.id) ? 'opacity-50 line-through' : ''}
+                                                `}
+                                            >
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex-1">
+                                                        <div className={`font-bold text-lg ${colorClasses[examen.color].text}`}>
+                                                            {examen.asignatura}
+                                                        </div>
+                                                        <div className="text-sm text-gray-600">{examen.nombre}</div>
+                                                    </div>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            toggleCompleted(examen.id);
+                                                        }}
+                                                        className={`
+                                                            p-2 rounded-full transition-all duration-300
+                                                            ${completedExams.includes(examen.id) 
+                                                                ? 'bg-green-500 text-white' 
+                                                                : 'bg-gray-200 text-gray-400 hover:bg-gray-300'}
+                                                        `}
+                                                    >
+                                                        <CheckCircle className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                                
+                                                <div className="space-y-1 text-sm text-gray-600">
+                                                    <div className="flex items-center gap-2">
+                                                        <Calendar className="w-4 h-4" />
+                                                        <span>{examen.fecha}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock className="w-4 h-4" />
+                                                        <span>{examen.hora}h</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <MapPin className="w-4 h-4" />
+                                                        <span>Aula {examen.aula}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {selectedExam && (
+                            <div 
+                                className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in"
+                                onClick={() => setSelectedExam(null)}
+                            >
+                                <div 
+                                    className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 zoom-in-95"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <div className={`bg-gradient-to-r ${colorClasses[selectedExam.color].bg} text-white p-6 rounded-xl mb-6 -mt-8 -mx-8`}>
+                                        <h3 className="text-2xl font-bold mb-2">{selectedExam.asignatura}</h3>
+                                        <p className="text-white/90">{selectedExam.nombre}</p>
+                                    </div>
+                                    
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                                            <Calendar className="w-6 h-6 text-gray-600" />
+                                            <div>
+                                                <div className="text-sm text-gray-600">Fecha</div>
+                                                <div className="font-semibold text-gray-800">{selectedExam.fecha}</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                                            <Clock className="w-6 h-6 text-gray-600" />
+                                            <div>
+                                                <div className="text-sm text-gray-600">Hora</div>
+                                                <div className="font-semibold text-gray-800">{selectedExam.hora}h</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                                            <MapPin className="w-6 h-6 text-gray-600" />
+                                            <div>
+                                                <div className="text-sm text-gray-600">Aula</div>
+                                                <div className="font-semibold text-gray-800">{selectedExam.aula}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex gap-3 mt-6">
+                                        <button
+                                            onClick={() => toggleCompleted(selectedExam.id)}
+                                            className={`
+                                                flex-1 py-3 rounded-xl font-semibold transition-all duration-300
+                                                ${completedExams.includes(selectedExam.id)
+                                                    ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                                    : 'bg-green-500 text-white hover:bg-green-600'}
+                                            `}
+                                        >
+                                            {completedExams.includes(selectedExam.id) ? 'Marcar como pendiente' : 'Marcar como hecho'}
+                                        </button>
+                                        
+                                        <button
+                                            onClick={() => setSelectedExam(null)}
+                                            className="px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-all duration-300"
+                                        >
+                                            Cerrar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<CalendarioExamenes />);
+    </script>
+</body>
+</html>
